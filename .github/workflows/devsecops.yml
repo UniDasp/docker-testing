@@ -34,9 +34,17 @@ jobs:
       - name: Snyk test Bun dependencies
         run: |
           echo "Analizando mi-api..."
-          snyk test ./mi-api --severity-threshold=high || true
+          snyk test ./mi-api --severity-threshold=high --json > snyk-api-report.json || true
           echo "Analizando mi-front..."
-          snyk test ./mi-front --severity-threshold=high || true
+          snyk test ./mi-front --severity-threshold=high --json > snyk-front-report.json || true
+
+      - name: Upload Snyk JSON Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-reports
+          path: |
+            snyk-api-report.json
+            snyk-front-report.json
 
       - name: Build Docker Images via Compose
         run: docker compose build
