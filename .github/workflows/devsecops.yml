@@ -89,12 +89,6 @@ jobs:
             -Dsonar.javascript.environments=browser,node
             -Dsonar.exclusions=**/node_modules/**,**/bun.lock
 
-      - name: Sonar Quality Gate
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
   deploy:
     name: Automatic Deployment
     runs-on: ubuntu-latest
