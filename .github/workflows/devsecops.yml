@@ -1,78 +1,128 @@
 name: Bun & Docker DevSecOps Pipeline
 
 on:
-  push:
-    branches:
-      - main
+push:
+branches:
+- main
 
 jobs:
-  snyk-scan:
-    name: Snyk Security & Container Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
+test:
+name: Unit Tests
+runs-on: ubuntu-latest
 
-      - name: Install dependencies
-        run: |
-          cd mi-api && bun install
-          cd ../mi-front && bun install
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-      - name: Install Snyk CLI
-        run: npm install -g snyk
+  - name: Set up Bun
+    uses: oven-sh/setup-bun@v1
+    with:
+      bun-version: latest
 
-      - name: Authenticate Snyk CLI
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk auth $SNYK_TOKEN
+  - name: Install API dependencies
+    run: |
+      cd mi-api
+      bun install
 
-      - name: Snyk test Bun dependencies
-        run: |
-          echo "Analizando mi-api..."
-          snyk test ./mi-api --severity-threshold=high --json > snyk-api-report.json || true
-          echo "Analizando mi-front..."
-          snyk test ./mi-front --severity-threshold=high --json > snyk-front-report.json || true
+  - name: Run Unit Tests
+    run: |
+      cd mi-api
+      bun test
 
-      - name: Upload Snyk JSON Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: snyk-reports
-          path: |
-            snyk-api-report.json
-            snyk-front-report.json
+snyk-scan:
+name: Snyk Security & Container Scan
+runs-on: ubuntu-latest
+needs: test
 
-      - name: Build Docker Images via Compose
-        run: docker compose build
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-      - name: Snyk Container Scan
-        run: |
-          snyk container test docker-testing-app --file=mi-api/Dockerfile || true
-          snyk container test docker-testing-client --file=mi-front/Dockerfile || true
+  - name: Set up Bun
+    uses: oven-sh/setup-bun@v1
+    with:
+      bun-version: latest
 
-  sonar-analysis:
-    name: SonarCloud Analysis
-    runs-on: ubuntu-latest
-    needs: snyk-scan
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  - name: Install dependencies
+    run: |
+      cd mi-api && bun install
+      cd ../mi-front && bun install
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=unidasp-1_docker-testing
-            -Dsonar.organization=unidasp-1
-            -Dsonar.sources=mi-api/src,mi-front
-            -Dsonar.javascript.environments=browser,node
-            -Dsonar.exclusions=**/node_modules/**,**/bun.lock
+  - name: Install Snyk CLI
+    run: npm install -g snyk
+
+  - name: Authenticate Snyk CLI
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    run: snyk auth $SNYK_TOKEN
+
+  - name: Scan API Dependencies
+    run: |
+      snyk test ./mi-api --severity-threshold=high --json > snyk-api-report.json
+
+  - name: Scan Frontend Dependencies
+    run: |
+      snyk test ./mi-front --severity-threshold=high --json > snyk-front-report.json
+
+  - name: Upload Snyk Reports
+    uses: actions/upload-artifact@v4
+    with:
+      name: snyk-reports
+      path: |
+        snyk-api-report.json
+        snyk-front-report.json
+
+  - name: Build Docker Images
+    run: docker compose build
+
+  - name: Container Security Scan
+    run: |
+      snyk container test docker-testing-app --severity-threshold=high
+
+sonar-analysis:
+name: SonarCloud Analysis
+runs-on: ubuntu-latest
+needs: snyk-scan
+
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+
+  - name: SonarCloud Scan
+    uses: SonarSource/sonarcloud-github-action@master
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    with:
+      args: >
+        -Dsonar.projectKey=unidasp-1_docker-testing
+        -Dsonar.organization=unidasp-1
+        -Dsonar.sources=mi-api/src,mi-front
+        -Dsonar.javascript.environments=browser,node
+        -Dsonar.exclusions=**/node_modules/**,**/bun.lock
+
+  - name: Sonar Quality Gate
+    uses: sonarsource/sonarqube-quality-gate-action@master
+    timeout-minutes: 5
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+deploy:
+name: Automatic Deployment
+runs-on: ubuntu-latest
+needs:
+- sonar-analysis
+
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
+
+  - name: Deploy Application
+    run: |
+      docker compose up -d
+
+  - name: Verify Containers
+    run: docker ps

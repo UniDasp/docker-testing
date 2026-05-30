@@ -1,12 +1,5 @@
 import { Elysia } from "elysia";
-
-const normalize = (data: any, source: string) => ({
-  source,
-  title: data.title,
-  description: data.description,
-  score: data.score,
-  image: data.image
-});
+import { normalize } from "./utils/normalize";
 
 async function fetchAniListAnime(search: string) {
   const res = await fetch("https://graphql.anilist.co", {
@@ -28,7 +21,9 @@ async function fetchAniListAnime(search: string) {
   });
 
   const json = await res.json();
-  if (json.errors || !json.data?.Media) return null;
+
+  if (json.errors || !json.data?.Media)
+    return null;
 
   const m = json.data.Media;
 
@@ -46,8 +41,11 @@ async function fetchJikanAnime(search: string) {
   );
 
   const json = await res.json();
+
   const a = json.data?.[0];
-  if (!a) return null;
+
+  if (!a)
+    return null;
 
   return normalize({
     title: a.title,
@@ -61,10 +59,16 @@ async function getAnime(search: string) {
   for (const fn of [fetchAniListAnime, fetchJikanAnime]) {
     try {
       const res = await fn(search);
-      if (res) return res;
+
+      if (res)
+        return res;
+
     } catch { }
   }
-  return { error: "busque por todos lados y no salio nada util..." };
+
+  return {
+    error: "busque por todos lados y no salio nada util..."
+  };
 }
 
 async function fetchAniListCharacter(search: string) {
@@ -86,7 +90,9 @@ async function fetchAniListCharacter(search: string) {
   });
 
   const json = await res.json();
-  if (json.errors || !json.data?.Character) return null;
+
+  if (json.errors || !json.data?.Character)
+    return null;
 
   const c = json.data.Character;
 
@@ -104,8 +110,11 @@ async function fetchJikanCharacter(search: string) {
   );
 
   const json = await res.json();
+
   const c = json.data?.[0];
-  if (!c) return null;
+
+  if (!c)
+    return null;
 
   return {
     source: "jikan",
@@ -119,13 +128,19 @@ async function getCharacter(search: string) {
   for (const fn of [fetchAniListCharacter, fetchJikanCharacter]) {
     try {
       const res = await fn(search);
-      if (res) return res;
+
+      if (res)
+        return res;
+
     } catch { }
   }
-  return { error: "ni rastro del personaje, desaparecio del mapa..." };
+
+  return {
+    error: "ni rastro del personaje, desaparecio del mapa..."
+  };
 }
 
-const app = new Elysia()
+export const app = new Elysia()
 
   .get("/anime", async ({ query }) => {
     const search = query.q || "Naruto";
@@ -137,13 +152,16 @@ const app = new Elysia()
       const res = await fetch("https://api.jikan.moe/v4/top/anime");
       const json = await res.json();
 
-      return json.data.slice(0, 5).map(a => ({
+      return json.data.slice(0, 5).map((a: any) => ({
         title: a.title,
         score: a.score,
         image: a.images.jpg.image_url
       }));
+
     } catch {
-      return { error: "iba todo bien hasta que el top decidio no existir..." };
+      return {
+        error: "iba todo bien hasta que el top decidio no existir..."
+      };
     }
   })
 
@@ -154,6 +172,7 @@ const app = new Elysia()
       );
 
       const json = await res.json();
+
       const a = json.data;
 
       return {
@@ -162,8 +181,11 @@ const app = new Elysia()
         score: a.score,
         image: a.images.jpg.image_url
       };
+
     } catch {
-      return { error: "ese anime no aparecio, capaz el id esta cursed..." };
+      return {
+        error: "ese anime no aparecio, capaz el id esta cursed..."
+      };
     }
   })
 
@@ -179,6 +201,7 @@ const app = new Elysia()
       );
 
       const json = await res.json();
+
       const c = json.data;
 
       return {
@@ -186,12 +209,19 @@ const app = new Elysia()
         description: c.about,
         image: c.images.jpg.image_url
       };
-    } catch {
-      return { error: "ese personaje no quiere ser encontrado... o simplemente  no existe." };
-    }
-  })
 
-  .listen({
+    } catch {
+      return {
+        error: "ese personaje no quiere ser encontrado... o simplemente no existe."
+      };
+    }
+  });
+
+if (import.meta.main) {
+  app.listen({
     port: 3000,
     hostname: "0.0.0.0"
   });
+
+  console.log("Running on port 3000");
+}

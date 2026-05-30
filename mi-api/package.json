@@ -2,14 +2,15 @@
   "name": "mi-api",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
     "elysia": "latest"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "vitest": "^4.1.7"
   },
   "module": "src/index.js"
 }
