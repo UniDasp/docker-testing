@@ -47,8 +47,8 @@ jobs:
 
       - name: Scan API & Frontend
         run: |
-          snyk test --file=mi-api/package.json --severity-threshold=high
-          snyk test --file=mi-front/package.json --severity-threshold=high
+          snyk test --file=mi-api/package.json --package-manager=npm --severity-threshold=high
+          snyk test --file=mi-front/package.json --package-manager=npm --severity-threshold=high
 
       - name: Build Docker Images
         run: docker compose build
