@@ -18,10 +18,11 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install API dependencies
+
+      - name: Install dependencies
         run: |
-          cd mi-api
-          bun install
+          cd mi-api && bun install
+          cd ../mi-front && bun install
 
       - name: Run Unit Tests
         run: |
