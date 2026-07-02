@@ -12,7 +12,7 @@ data "aws_internet_gateway" "main" {
   }
 }
 
-data "aws_subnet" "public" {
+data "aws_subnets" "public" {
   filter {
     name   = "tag:Name"
     values = ["${var.project_name}-public-*"]

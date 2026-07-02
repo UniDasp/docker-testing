@@ -41,7 +41,7 @@ output "vpc_id" {
 
 output "public_subnet_ids" {
   description = "IDs de las subnets publicas"
-  value       = data.aws_subnet.public[*].id
+  value       = data.aws_subnets.public.ids
 }
 
 output "cloudwatch_log_group_name" {
