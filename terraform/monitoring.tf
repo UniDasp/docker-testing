@@ -1,4 +1,5 @@
 resource "helm_release" "kube_prometheus_stack" {
+  count            = var.manage_monitoring_stack ? 1 : 0
   name             = "kube-prometheus-stack"
   repository       = "https://prometheus-community.github.io/helm-charts"
   chart            = "kube-prometheus-stack"
@@ -17,6 +18,10 @@ resource "helm_release" "kube_prometheus_stack" {
 
   timeout = 900
   wait    = true
+
+  lifecycle {
+    ignore_changes = all
+  }
 
   depends_on = [
     data.aws_eks_node_group.main

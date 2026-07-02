@@ -56,3 +56,9 @@ variable "log_retention_days" {
   type        = number
   default     = 7
 }
+
+variable "manage_monitoring_stack" {
+  description = "Si es true, Terraform gestiona el stack de monitoreo. Si es false, se asume que ya existe"
+  type        = bool
+  default     = false
+}
