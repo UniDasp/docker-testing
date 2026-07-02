@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mi-api
+  namespace: docker-testing
+  labels:
+    app: mi-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mi-api
+  template:
+    metadata:
+      labels:
+        app: mi-api
+    spec:
+      containers:
+        - name: mi-api
+          image: ${ECR_API_IMAGE}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -2,11 +2,11 @@ FROM oven/bun:1
 
 WORKDIR /app
 
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock bun.lockb* ./
 RUN bun install
 
 COPY . .
 
 EXPOSE 3000
 
-CMD ["bun", "run", "dev"]
+CMD ["bun", "run", "start"]

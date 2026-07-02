@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: docker-testing
+data:
+  API_BASE_URL: "http://mi-api:3000"
+  PORT: "3001"
