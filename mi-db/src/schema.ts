@@ -19,6 +19,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_ip ON searches(ip)
 `);
 
+console.log('📦 Database initialized at:', dbPath);
+
 export interface Search {
   id?: number;
   ip: string;
