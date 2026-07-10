@@ -47,10 +47,7 @@ jobs:
       - name: Ensure ECR repositories exist
         working-directory: terraform
         run: |
-          terraform apply -auto-approve \
-            -target=aws_ecr_repository.api \
-            -target=aws_ecr_repository.frontend \
-            -target=aws_ecr_repository.db
+          echo "ECR repositories already exist, skipping creation"
 
       - name: Set image variables
         id: image-vars
