@@ -1,6 +1,6 @@
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
-  role_arn = aws_iam_role.eks_cluster.arn
+  role_arn = data.aws_iam_role.eks_cluster.arn
   version  = var.cluster_version
 
   vpc_config {
@@ -19,7 +19,7 @@ resource "aws_eks_cluster" "main" {
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.project_name}-nodes"
-  node_role_arn   = aws_iam_role.eks_nodes.arn
+  node_role_arn   = data.aws_iam_role.eks_nodes.arn
   subnet_ids      = aws_subnet.public[*].id
 
   scaling_config {
