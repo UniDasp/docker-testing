@@ -113,21 +113,11 @@ jobs:
           docker push "${DB_REPO}:${IMAGE_TAG}"
           docker push "${DB_REPO}:latest"
 
-      - name: Terraform Validate Infrastructure
+      - name: Terraform Apply
         working-directory: terraform
         run: |
-          echo "Validating existing AWS infrastructure..."
-          terraform plan -detailed-exitcode || exit_code=$?
-          if [ $exit_code -eq 1 ]; then
-            echo "WARNING: Terraform validation failed - some resources may not exist."
-            echo "This pipeline will continue deployment, but you may need to create the missing infrastructure manually."
-            echo "Please review the error above for details on missing resources."
-          elif [ $exit_code -eq 2 ]; then
-            echo "WARNING: Terraform detected drift in infrastructure. Please review the plan above."
-            echo "This pipeline will continue deployment, but you may need to manually fix the drift."
-          else
-            echo "Infrastructure validation passed"
-          fi
+          echo "Applying Terraform configuration..."
+          terraform apply -auto-approve
 
       - name: Update kubeconfig
         run: |
