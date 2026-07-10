@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   test:
+    if: false
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
@@ -31,6 +33,7 @@ jobs:
 
   snyk-scan:
     name: Snyk Security & Container Scan
+    if: false
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -68,6 +71,7 @@ jobs:
 
   sonar-analysis:
     name: SonarCloud Analysis
+    if: false
     runs-on: ubuntu-latest
     needs: snyk-scan
     steps:

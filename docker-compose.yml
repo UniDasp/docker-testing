@@ -1,4 +1,26 @@
 services:
+  db:
+    build: ./mi-db
+    container_name: anime-db
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3002"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - db-data:/app
+
   app:
     build: ./mi-api
     container_name: anime-api
@@ -19,6 +41,7 @@ services:
       timeout: 10s
       retries: 3
 
+
   client:
     build: ./mi-front
     container_name: anime-client
@@ -26,9 +49,11 @@ services:
       - "3001:3001"
     environment:
       API_BASE_URL: http://app:3000
+      DB_BASE_URL: http://db:3002
     restart: unless-stopped
     depends_on:
       - app
+      - db
     deploy:
       resources:
         limits:
@@ -37,3 +62,6 @@ services:
         reservations:
           cpus: "0.25"
           memory: 256M
+
+volumes:
+  db-data:

@@ -34,6 +34,11 @@ output "ecr_frontend_repository_url" {
   value       = data.aws_ecr_repository.frontend.repository_url
 }
 
+output "ecr_db_repository_url" {
+  description = "URL del repositorio ECR de la DB"
+  value       = data.aws_ecr_repository.db.repository_url
+}
+
 output "vpc_id" {
   description = "ID de la VPC"
   value       = data.aws_vpc.main.id

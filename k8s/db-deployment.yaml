@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mi-db
+  namespace: docker-testing
+  labels:
+    app: mi-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mi-db
+  template:
+    metadata:
+      labels:
+        app: mi-db
+    spec:
+      containers:
+        - name: mi-db
+          image: ${ECR_DB_IMAGE}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3002
+              name: http
+          readinessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: db-storage
+              mountPath: /app
+      volumes:
+        - name: db-storage
+          emptyDir: {}

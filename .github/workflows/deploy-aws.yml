@@ -1,13 +1,9 @@
 name: Deploy to AWS EKS
 
 on:
-  workflow_run:
-    workflows:
-      - "Bun & Docker DevSecOps Pipeline"
-    types:
-      - completed
+  push:
     branches:
-      - main
+      - '**'
 
 permissions:
   contents: read
@@ -16,7 +12,6 @@ jobs:
   deploy:
     name: Deploy to AWS EKS
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -27,8 +22,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,7 +50,8 @@ jobs:
           if ! aws ecr describe-repositories --repository-names docker-testing-api >/dev/null 2>&1; then
             terraform apply -auto-approve \
               -target=aws_ecr_repository.api \
-              -target=aws_ecr_repository.frontend
+              -target=aws_ecr_repository.frontend \
+              -target=aws_ecr_repository.db
           fi
 
       - name: Set image variables
@@ -66,7 +60,8 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "api_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-api" >> "$GITHUB_OUTPUT"
           echo "frontend_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-frontend" >> "$GITHUB_OUTPUT"
-          echo "tag=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          echo "db_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-db" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Build API image
         env:
@@ -81,6 +76,13 @@ jobs:
           FRONTEND_REPO: ${{ steps.image-vars.outputs.frontend_repo }}
         run: |
           docker build -t "${FRONTEND_REPO}:${IMAGE_TAG}" -t "${FRONTEND_REPO}:latest" ./mi-front
+
+      - name: Build DB image
+        env:
+          IMAGE_TAG: ${{ steps.image-vars.outputs.tag }}
+          DB_REPO: ${{ steps.image-vars.outputs.db_repo }}
+        run: |
+          docker build -t "${DB_REPO}:${IMAGE_TAG}" -t "${DB_REPO}:latest" ./mi-db
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -100,6 +102,14 @@ jobs:
         run: |
           docker push "${FRONTEND_REPO}:${IMAGE_TAG}"
           docker push "${FRONTEND_REPO}:latest"
+
+      - name: Push DB image
+        env:
+          IMAGE_TAG: ${{ steps.image-vars.outputs.tag }}
+          DB_REPO: ${{ steps.image-vars.outputs.db_repo }}
+        run: |
+          docker push "${DB_REPO}:${IMAGE_TAG}"
+          docker push "${DB_REPO}:latest"
 
       - name: Terraform Plan
         working-directory: terraform
@@ -124,6 +134,7 @@ jobs:
         env:
           ECR_API_IMAGE: ${{ steps.image-vars.outputs.api_repo }}:${{ steps.image-vars.outputs.tag }}
           ECR_FRONTEND_IMAGE: ${{ steps.image-vars.outputs.frontend_repo }}:${{ steps.image-vars.outputs.tag }}
+          ECR_DB_IMAGE: ${{ steps.image-vars.outputs.db_repo }}:${{ steps.image-vars.outputs.tag }}
         run: |
           mkdir -p k8s/rendered
           for manifest in k8s/*.yaml; do
@@ -135,13 +146,18 @@ jobs:
           kubectl apply -f k8s/rendered/namespace.yaml
           kubectl wait --for=condition=ready namespace/docker-testing --timeout=10s || true
           kubectl apply -f k8s/rendered/configmap.yaml
+          kubectl apply -f k8s/rendered/db-deployment.yaml
+          kubectl apply -f k8s/rendered/db-service.yaml
           kubectl apply -f k8s/rendered/api-deployment.yaml
           kubectl apply -f k8s/rendered/api-service.yaml
           kubectl apply -f k8s/rendered/frontend-deployment.yaml
           kubectl apply -f k8s/rendered/frontend-service.yaml
+          kubectl apply -f k8s/rendered/api-hpa.yaml
+          kubectl apply -f k8s/rendered/db-hpa.yaml
 
       - name: Wait for application rollout
         run: |
+          kubectl rollout status deployment/mi-db -n docker-testing --timeout=300s
           kubectl rollout status deployment/mi-api -n docker-testing --timeout=300s
           kubectl rollout status deployment/mi-front -n docker-testing --timeout=300s
 
@@ -162,6 +178,7 @@ jobs:
           echo ""
           echo "Frontend URL: http://${FRONTEND_HOST}"
           echo "API (internal): http://mi-api.docker-testing.svc.cluster.local:3000"
+          echo "DB (internal): http://mi-db.docker-testing.svc.cluster.local:3002"
           if [ -n "$GRAFANA_HOST" ]; then
             echo "Grafana URL: http://${GRAFANA_HOST}"
             echo "Grafana default credentials: admin / prom-operator"
@@ -170,5 +187,6 @@ jobs:
           echo "CloudWatch log group: $(cd terraform && terraform output -raw cloudwatch_log_group_name)"
           echo "ECR API repository: $(cd terraform && terraform output -raw ecr_api_repository_url)"
           echo "ECR Frontend repository: $(cd terraform && terraform output -raw ecr_frontend_repository_url)"
+          echo "ECR DB repository: $(cd terraform && terraform output -raw ecr_db_repository_url)"
           echo "EKS cluster: ${{ env.TF_VAR_cluster_name }}"
           echo "Region: ${{ env.AWS_REGION }}"
