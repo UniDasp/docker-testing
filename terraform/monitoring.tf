@@ -24,6 +24,6 @@ resource "helm_release" "kube_prometheus_stack" {
   }
 
   depends_on = [
-    data.aws_eks_node_group.main
+    aws_eks_node_group.main
   ]
 }
