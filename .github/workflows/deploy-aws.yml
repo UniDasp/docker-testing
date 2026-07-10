@@ -51,15 +51,16 @@ jobs:
         working-directory: terraform
         run: terraform validate
 
-      - name: Ensure ECR repositories exist
-        working-directory: terraform
+      - name: Validate ECR repositories exist
         run: |
-          if ! aws ecr describe-repositories --repository-names docker-testing-api >/dev/null 2>&1; then
-            terraform apply -auto-approve \
-              -target=aws_ecr_repository.api \
-              -target=aws_ecr_repository.frontend \
-              -target=aws_ecr_repository.db
-          fi
+          echo "Validating ECR repositories..."
+          for repo in docker-testing-api docker-testing-frontend docker-testing-db; do
+            if ! aws ecr describe-repositories --repository-names $repo >/dev/null 2>&1; then
+              echo "WARNING: ECR repository '$repo' does not exist. Please create it manually."
+            else
+              echo "ECR repository '$repo' exists"
+            fi
+          done
 
       - name: Set image variables
         id: image-vars
@@ -118,13 +119,20 @@ jobs:
           docker push "${DB_REPO}:${IMAGE_TAG}"
           docker push "${DB_REPO}:latest"
 
-      - name: Terraform Plan
+      - name: Terraform Validate Infrastructure
         working-directory: terraform
-        run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        working-directory: terraform
-        run: terraform apply -auto-approve tfplan
+        run: |
+          echo "Validating existing AWS infrastructure..."
+          terraform plan -detailed-exitcode || exit_code=$?
+          if [ $exit_code -eq 1 ]; then
+            echo "Terraform validation failed - infrastructure configuration error"
+            exit 1
+          elif [ $exit_code -eq 2 ]; then
+            echo "WARNING: Terraform detected drift in infrastructure. Please review the plan above."
+            echo "This pipeline will continue deployment, but you may need to manually fix the drift."
+          else
+            echo "Infrastructure validation passed"
+          fi
 
       - name: Update kubeconfig
         run: |
@@ -188,8 +196,5 @@ jobs:
             echo "Grafana default credentials: admin / prom-operator"
           fi
           echo ""
-          echo "CloudWatch log group: $(cd terraform && terraform output -raw cloudwatch_log_group_name)"
-          echo "ECR API repository: $(cd terraform && terraform output -raw ecr_api_repository_url)"
-          echo "ECR Frontend repository: $(cd terraform && terraform output -raw ecr_frontend_repository_url)"
           echo "EKS cluster: ${{ env.TF_VAR_cluster_name }}"
           echo "Region: ${{ env.AWS_REGION }}"

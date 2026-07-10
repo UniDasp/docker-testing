@@ -1,17 +1,3 @@
-data "aws_eks_cluster_auth" "main" {
-  name = data.aws_eks_cluster.main.name
-}
-
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.main.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.main.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.main.token
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.main.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.main.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.main.token
-  }
-}
+# Terraform is now used only for validation, not resource creation
+# Kubernetes and Helm providers are not needed since we don't manage K8s resources with Terraform
+# This file is kept for reference purposes only
