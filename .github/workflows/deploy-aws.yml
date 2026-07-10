@@ -1,13 +1,10 @@
 name: Deploy to AWS EKS
 
 on:
-  workflow_run:
-    workflows:
-      - "Bun & Docker DevSecOps Pipeline"
-    types:
-      - completed
+  push:
     branches:
       - main
+      - with-db
 
 permissions:
   contents: read
