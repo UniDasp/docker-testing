@@ -10,17 +10,17 @@ output "aws_account_id" {
 
 output "cluster_name" {
   description = "Nombre del cluster EKS"
-  value       = data.aws_eks_cluster.main.name
+  value       = aws_eks_cluster.main.name
 }
 
 output "cluster_endpoint" {
   description = "Endpoint del API server de EKS"
-  value       = data.aws_eks_cluster.main.endpoint
+  value       = aws_eks_cluster.main.endpoint
 }
 
 output "cluster_certificate_authority_data" {
   description = "Certificado CA del cluster EKS"
-  value       = data.aws_eks_cluster.main.certificate_authority[0].data
+  value       = aws_eks_cluster.main.certificate_authority[0].data
   sensitive   = true
 }
 
@@ -41,15 +41,15 @@ output "ecr_db_repository_url" {
 
 output "vpc_id" {
   description = "ID de la VPC"
-  value       = data.aws_vpc.main.id
+  value       = aws_vpc.main.id
 }
 
 output "public_subnet_ids" {
   description = "IDs de las subnets publicas"
-  value       = data.aws_subnets.public.ids
+  value       = aws_subnet.public[*].id
 }
 
 output "cloudwatch_log_group_name" {
   description = "Nombre del log group de CloudWatch para EKS"
-  value       = data.aws_cloudwatch_log_group.eks_cluster.name
+  value       = aws_cloudwatch_log_group.eks_cluster.name
 }
