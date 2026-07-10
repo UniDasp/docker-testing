@@ -1,6 +1,20 @@
 import { Elysia } from "elysia";
 import { normalize } from "./utils/normalize";
 
+const DB_SERVICE_URL = process.env.DB_SERVICE_URL || "http://mi-db:5000";
+
+async function saveSearch(ip: string, anime: string) {
+  try {
+    await fetch(`${DB_SERVICE_URL}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ip, anime })
+    });
+  } catch (error) {
+    console.error("Failed to save search:", error);
+  }
+}
+
 async function fetchAniListAnime(search: string) {
   const res = await fetch("https://graphql.anilist.co", {
     method: "POST",
@@ -142,8 +156,14 @@ async function getCharacter(search: string) {
 
 export const app = new Elysia()
 
-  .get("/anime", async ({ query }) => {
+  .get("/anime", async ({ query, request }) => {
     const search = query.q || "Naruto";
+    const ip = request.headers.get("x-forwarded-for") || 
+               request.headers.get("x-real-ip") || 
+               "unknown";
+    
+    saveSearch(ip, search);
+    
     return await getAnime(search);
   })
 

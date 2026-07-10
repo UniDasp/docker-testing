@@ -57,7 +57,8 @@ jobs:
           if ! aws ecr describe-repositories --repository-names docker-testing-api >/dev/null 2>&1; then
             terraform apply -auto-approve \
               -target=aws_ecr_repository.api \
-              -target=aws_ecr_repository.frontend
+              -target=aws_ecr_repository.frontend \
+              -target=aws_ecr_repository.db
           fi
 
       - name: Set image variables
@@ -66,6 +67,7 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "api_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-api" >> "$GITHUB_OUTPUT"
           echo "frontend_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-frontend" >> "$GITHUB_OUTPUT"
+          echo "db_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-db" >> "$GITHUB_OUTPUT"
           echo "tag=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Build API image
@@ -81,6 +83,13 @@ jobs:
           FRONTEND_REPO: ${{ steps.image-vars.outputs.frontend_repo }}
         run: |
           docker build -t "${FRONTEND_REPO}:${IMAGE_TAG}" -t "${FRONTEND_REPO}:latest" ./mi-front
+
+      - name: Build DB image
+        env:
+          IMAGE_TAG: ${{ steps.image-vars.outputs.tag }}
+          DB_REPO: ${{ steps.image-vars.outputs.db_repo }}
+        run: |
+          docker build -t "${DB_REPO}:${IMAGE_TAG}" -t "${DB_REPO}:latest" ./mi-db
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -100,6 +109,14 @@ jobs:
         run: |
           docker push "${FRONTEND_REPO}:${IMAGE_TAG}"
           docker push "${FRONTEND_REPO}:latest"
+
+      - name: Push DB image
+        env:
+          IMAGE_TAG: ${{ steps.image-vars.outputs.tag }}
+          DB_REPO: ${{ steps.image-vars.outputs.db_repo }}
+        run: |
+          docker push "${DB_REPO}:${IMAGE_TAG}"
+          docker push "${DB_REPO}:latest"
 
       - name: Terraform Plan
         working-directory: terraform
@@ -124,6 +141,7 @@ jobs:
         env:
           ECR_API_IMAGE: ${{ steps.image-vars.outputs.api_repo }}:${{ steps.image-vars.outputs.tag }}
           ECR_FRONTEND_IMAGE: ${{ steps.image-vars.outputs.frontend_repo }}:${{ steps.image-vars.outputs.tag }}
+          ECR_DB_IMAGE: ${{ steps.image-vars.outputs.db_repo }}:${{ steps.image-vars.outputs.tag }}
         run: |
           mkdir -p k8s/rendered
           for manifest in k8s/*.yaml; do
@@ -135,6 +153,8 @@ jobs:
           kubectl apply -f k8s/rendered/namespace.yaml
           kubectl wait --for=condition=ready namespace/docker-testing --timeout=10s || true
           kubectl apply -f k8s/rendered/configmap.yaml
+          kubectl apply -f k8s/rendered/db-deployment.yaml
+          kubectl apply -f k8s/rendered/db-service.yaml
           kubectl apply -f k8s/rendered/api-deployment.yaml
           kubectl apply -f k8s/rendered/api-service.yaml
           kubectl apply -f k8s/rendered/frontend-deployment.yaml
@@ -142,6 +162,7 @@ jobs:
 
       - name: Wait for application rollout
         run: |
+          kubectl rollout status deployment/mi-db -n docker-testing --timeout=300s
           kubectl rollout status deployment/mi-api -n docker-testing --timeout=300s
           kubectl rollout status deployment/mi-front -n docker-testing --timeout=300s
 
