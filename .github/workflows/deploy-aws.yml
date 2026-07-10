@@ -13,7 +13,6 @@ jobs:
   deploy:
     name: Deploy to AWS EKS
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -24,8 +23,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -66,7 +63,7 @@ jobs:
           echo "api_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-api" >> "$GITHUB_OUTPUT"
           echo "frontend_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-frontend" >> "$GITHUB_OUTPUT"
           echo "db_repo=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/docker-testing-db" >> "$GITHUB_OUTPUT"
-          echo "tag=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Build API image
         env:
