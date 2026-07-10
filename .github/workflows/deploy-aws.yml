@@ -19,8 +19,6 @@ jobs:
       TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
       TF_VAR_project_name: docker-testing
       TF_VAR_cluster_name: docker-testing-eks
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     steps:
       - name: Checkout code
@@ -51,9 +49,9 @@ jobs:
       - name: Set image variables
         id: image-vars
         run: |
-          echo "api_repo=${{ secrets.DOCKER_USERNAME }}/docker-testing-api" >> "$GITHUB_OUTPUT"
-          echo "frontend_repo=${{ secrets.DOCKER_USERNAME }}/docker-testing-frontend" >> "$GITHUB_OUTPUT"
-          echo "db_repo=${{ secrets.DOCKER_USERNAME }}/docker-testing-db" >> "$GITHUB_OUTPUT"
+          echo "api_repo=ghcr.io/${{ github.repository_owner }}/docker-testing-api" >> "$GITHUB_OUTPUT"
+          echo "frontend_repo=ghcr.io/${{ github.repository_owner }}/docker-testing-frontend" >> "$GITHUB_OUTPUT"
+          echo "db_repo=ghcr.io/${{ github.repository_owner }}/docker-testing-db" >> "$GITHUB_OUTPUT"
           echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Build API image
@@ -77,11 +75,12 @@ jobs:
         run: |
           docker build -t "${DB_REPO}:${IMAGE_TAG}" -t "${DB_REPO}:latest" ./mi-db
 
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push API image
         env:
