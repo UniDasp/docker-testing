@@ -51,5 +51,5 @@ output "public_subnet_ids" {
 
 output "cloudwatch_log_group_name" {
   description = "Nombre del log group de CloudWatch para EKS"
-  value       = aws_cloudwatch_log_group.eks_cluster.name
+  value       = data.aws_cloudwatch_log_group.eks_cluster.name
 }

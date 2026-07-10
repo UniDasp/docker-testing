@@ -8,7 +8,7 @@ resource "aws_eks_cluster" "main" {
   }
 
   depends_on = [
-    aws_cloudwatch_log_group.eks_cluster
+    data.aws_cloudwatch_log_group.eks_cluster
   ]
 
   tags = {
