@@ -47,12 +47,10 @@ jobs:
       - name: Ensure ECR repositories exist
         working-directory: terraform
         run: |
-          if ! aws ecr describe-repositories --repository-names docker-testing-api >/dev/null 2>&1; then
-            terraform apply -auto-approve \
-              -target=aws_ecr_repository.api \
-              -target=aws_ecr_repository.frontend \
-              -target=aws_ecr_repository.db
-          fi
+          terraform apply -auto-approve \
+            -target=aws_ecr_repository.api \
+            -target=aws_ecr_repository.frontend \
+            -target=aws_ecr_repository.db
 
       - name: Set image variables
         id: image-vars

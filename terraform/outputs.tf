@@ -26,17 +26,17 @@ output "cluster_certificate_authority_data" {
 
 output "ecr_api_repository_url" {
   description = "URL del repositorio ECR de la API"
-  value       = data.aws_ecr_repository.api.repository_url
+  value       = aws_ecr_repository.api.repository_url
 }
 
 output "ecr_frontend_repository_url" {
   description = "URL del repositorio ECR del frontend"
-  value       = data.aws_ecr_repository.frontend.repository_url
+  value       = aws_ecr_repository.frontend.repository_url
 }
 
 output "ecr_db_repository_url" {
   description = "URL del repositorio ECR de la DB"
-  value       = data.aws_ecr_repository.db.repository_url
+  value       = aws_ecr_repository.db.repository_url
 }
 
 output "vpc_id" {
