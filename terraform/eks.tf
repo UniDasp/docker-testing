@@ -7,12 +7,6 @@ resource "aws_eks_cluster" "main" {
     subnet_ids = aws_subnet.public[*].id
   }
 
-  logging {
-    cluster_logging {
-      types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
-    }
-  }
-
   depends_on = [
     aws_cloudwatch_log_group.eks_cluster
   ]
