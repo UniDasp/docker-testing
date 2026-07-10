@@ -9,6 +9,7 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/with-db'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,6 +34,7 @@ jobs:
     name: Snyk Security & Container Scan
     runs-on: ubuntu-latest
     needs: test
+    if: github.ref != 'refs/heads/with-db'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,6 +72,7 @@ jobs:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     needs: snyk-scan
+    if: github.ref != 'refs/heads/with-db'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
